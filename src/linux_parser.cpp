@@ -2,6 +2,8 @@
 #include <unistd.h>
 #include <string>
 #include <vector>
+#include <map>
+#include <sstream>
 
 #include "linux_parser.h"
 
@@ -12,62 +14,86 @@ using std::vector;
 
 // DONE: An example of how to read data from the filesystem
 string LinuxParser::OperatingSystem() {
-  string line;
-  string key;
-  string value;
-  std::ifstream filestream(kOSPath);
-  if (filestream.is_open()) {
-    while (std::getline(filestream, line)) {
-      std::replace(line.begin(), line.end(), ' ', '_');
-      std::replace(line.begin(), line.end(), '=', ' ');
-      std::replace(line.begin(), line.end(), '"', ' ');
-      std::istringstream linestream(line);
-      while (linestream >> key >> value) {
-        if (key == "PRETTY_NAME") {
-          std::replace(value.begin(), value.end(), '_', ' ');
-          return value;
+    string line;
+    string key;
+    string value;
+    std::ifstream filestream(kOSPath);
+    if (filestream.is_open()) {
+        while (std::getline(filestream, line)) {
+            std::replace(line.begin(), line.end(), ' ', '_');
+            std::replace(line.begin(), line.end(), '=', ' ');
+            std::replace(line.begin(), line.end(), '"', ' ');
+            std::istringstream linestream(line);
+            while (linestream >> key >> value) {
+                if (key == "PRETTY_NAME") {
+                    std::replace(value.begin(), value.end(), '_', ' ');
+                    return value;
+                }
+            }
         }
-      }
     }
-  }
-  return value;
+    return value;
 }
 
 // DONE: An example of how to read data from the filesystem
 string LinuxParser::Kernel() {
-  string os, kernel;
-  string line;
-  std::ifstream stream(kProcDirectory + kVersionFilename);
-  if (stream.is_open()) {
-    std::getline(stream, line);
-    std::istringstream linestream(line);
-    linestream >> os >> kernel;
-  }
-  return kernel;
+    string os, kernel;
+    string line;
+    std::ifstream stream(kProcDirectory + kVersionFilename);
+    if (stream.is_open()) {
+        std::getline(stream, line);
+        std::istringstream linestream(line);
+        linestream >> os >> kernel;
+    }
+    return kernel;
 }
 
 // BONUS: Update this to use std::filesystem
 vector<int> LinuxParser::Pids() {
-  vector<int> pids;
-  DIR* directory = opendir(kProcDirectory.c_str());
-  struct dirent* file;
-  while ((file = readdir(directory)) != nullptr) {
-    // Is this a directory?
-    if (file->d_type == DT_DIR) {
-      // Is every character of the name a digit?
-      string filename(file->d_name);
-      if (std::all_of(filename.begin(), filename.end(), isdigit)) {
-        int pid = stoi(filename);
-        pids.push_back(pid);
-      }
+    vector<int> pids;
+    DIR *directory = opendir(kProcDirectory.c_str());
+    struct dirent *file;
+    while ((file = readdir(directory)) != nullptr) {
+        // Is this a directory?
+        if (file->d_type == DT_DIR) {
+            // Is every character of the name a digit?
+            string filename(file->d_name);
+            if (std::all_of(filename.begin(), filename.end(), isdigit)) {
+                int pid = stoi(filename);
+                pids.push_back(pid);
+            }
+        }
     }
-  }
-  closedir(directory);
-  return pids;
+    closedir(directory);
+    return pids;
 }
 
 // TODO: Read and return the system memory utilization
-float LinuxParser::MemoryUtilization() { return 0.0; }
+float LinuxParser::MemoryUtilization() {
+    string line;
+    string key;
+    string value;
+    std::map<std::string, float> localMap;
+    std::ifstream filestream(kProcDirectory + kMeminfoFilename);
+    if (filestream.is_open()) {
+        int counterGuard = 2;
+        while (std::getline(filestream, line) && counterGuard > 0) {
+            std::istringstream linestream(line);
+            while (std::getline(linestream, key, ':')) {
+                if (key == "MemTotal" || key == "MemFree") {
+                    linestream >> value;
+                    value.erase(std::remove(value.begin(), value.end(), ' '), value.end());
+                    value.erase(value.size() - 2);
+                    localMap.insert(std::make_pair("key", stof(value)));
+                }
+            }
+            counterGuard--;
+        }
+    }
+
+    float utilization = (localMap["MemTotal"] - localMap["MemFree"]) / localMap["MemTotal"];
+    return utilization;
+}
 
 // TODO: Read and return the system uptime
 long LinuxParser::UpTime() { return 0; }
