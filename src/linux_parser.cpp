@@ -4,7 +4,6 @@
 #include <vector>
 #include <map>
 #include <sstream>
-
 #include "linux_parser.h"
 
 using std::stof;
@@ -68,7 +67,6 @@ vector<int> LinuxParser::Pids() {
     return pids;
 }
 
-// TODO: Read and return the system memory utilization
 float LinuxParser::MemoryUtilization() {
     string line;
     string key;
@@ -84,7 +82,7 @@ float LinuxParser::MemoryUtilization() {
                     linestream >> value;
                     value.erase(std::remove(value.begin(), value.end(), ' '), value.end());
                     value.erase(value.size() - 2);
-                    localMap.insert(std::make_pair("key", stof(value)));
+                    localMap.insert(std::make_pair(key, stof(value)));
                 }
             }
             counterGuard--;
@@ -115,10 +113,50 @@ long LinuxParser::IdleJiffies() { return 0; }
 vector<string> LinuxParser::CpuUtilization() { return {}; }
 
 // TODO: Read and return the total number of processes
-int LinuxParser::TotalProcesses() { return 0; }
+int LinuxParser::TotalProcesses() {
+    string line;
+    string key;
+    string value;
+    std::map<std::string, float> localMap;
+    std::ifstream filestream(kProcDirectory + kStatFilename);
+    if (filestream.is_open()) {
+        while (std::getline(filestream, line)) {
+            std::replace(line.begin(), line.end(), ' ', '_');
+            std::istringstream linestream(line);
+            std::vector<std::string> tokens = {};
+            while (std::getline(linestream, key, '_')) {
+                tokens.push_back(key);
+            }
+
+            if (tokens.size() == 2 && tokens[0] == "Processes") {
+                return stoi(tokens[1]);
+            }
+        }
+    }
+    return 0;
+}
 
 // TODO: Read and return the number of running processes
-int LinuxParser::RunningProcesses() { return 0; }
+int LinuxParser::RunningProcesses() { string line;
+    string key;
+    string value;
+    std::map<std::string, float> localMap;
+    std::ifstream filestream(kProcDirectory + kStatFilename);
+    if (filestream.is_open()) {
+        while (std::getline(filestream, line)) {
+            std::replace(line.begin(), line.end(), ' ', '_');
+            std::istringstream linestream(line);
+            std::vector<std::string> tokens = {};
+            while (std::getline(linestream, key, '_')) {
+                tokens.push_back(key);
+            }
+
+            if (tokens.size() == 2 && tokens[0] == "procs_running") {
+                return stoi(tokens[1]);
+            }
+        }
+    }
+    return 0;}
 
 // TODO: Read and return the command associated with a process
 // REMOVE: [[maybe_unused]] once you define the function
