@@ -106,7 +106,26 @@ float Process::CpuUtilization() {
 
 string Process::Command() { return command_; }
 
-string Process::Ram() { return string(); }
+string Process::Ram() { 
+	    string line;
+    string key;
+    string value;
+    std::ifstream filestream(LinuxParser::kProcDirectory + to_string(pid_) + LinuxParser::kStatusFilename);
+    if (filestream.is_open()) {
+        while (std::getline(filestream, line)) {
+            std::replace(line.begin(), line.end(), ':', ' ');
+            std::istringstream linestream(line);
+            while (linestream >> key >> value) {
+                if (key == "VmSize") {
+                    return value;
+                }
+            }
+        }
+    }
+
+    filestream.close();
+    return value;
+}
 
 string Process::User() { return user_; }
 
