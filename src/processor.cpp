@@ -1,33 +1,27 @@
 #include "processor.h"
 #include "linux_parser.h"
-#include <vector>
-#include <string>
-#include <iostream>
-using std::string;
-using std::vector;
-using std::stol;
-
 
 float Processor::Utilization() {
-    vector<string> cpuMeasures = LinuxParser::CpuUtilization();
+  std::vector<std::string> jiffies = LinuxParser::CpuUtilization();
+  for (int i = 0; i < int(jiffies.size()); i++) {
+    if (i != LinuxParser::kGuest_ and i != LinuxParser::kGuestNice_) {
+      total_jiffies += std::stof(jiffies[i]);
+    }
+    if (i == LinuxParser::kIdle_ or i == LinuxParser::kIOwait_) {
+      idle_jiffies += std::stof(jiffies[i]);
+    }
+  }
+  util_jiffies = total_jiffies - idle_jiffies;
 
-    long userRead = stol(cpuMeasures[2]);
-    long niceRead = stol(cpuMeasures[3]);
-    long systemRead = stol(cpuMeasures[4]);
-    long idleRead = stol(cpuMeasures[5]);
-    long iowaitRead = stol(cpuMeasures[6]);
-    long irqRead = stol(cpuMeasures[7]);
-    long softirqRead = stol(cpuMeasures[8]);
-    long stealRead = stol(cpuMeasures[9]);
-    long guesRead = stol(cpuMeasures[10]);
-    long guestniceRead = stol(cpuMeasures[11]);
-    // more accurate values for calculations.
-    long user = userRead - guesRead;
-    long nice = niceRead - guestniceRead;
-    // substitute all values
-    long idle = idleRead + iowaitRead;
-    long non_idle = user + nice + systemRead + irqRead + softirqRead + stealRead;
-    long total = idle + non_idle;
+  bool curr_util = true;
+  if (curr_util) {
+    usage = (util_jiffies - util_jiffies_prev) /
+            (total_jiffies - total_jiffies_prev);
+    total_jiffies_prev = total_jiffies;
+    util_jiffies_prev = util_jiffies;
+  } else {
+    usage = util_jiffies / total_jiffies;
+  }
 
-    return non_idle / total;
+  return usage;
 }
