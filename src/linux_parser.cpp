@@ -7,6 +7,9 @@
 #include <sstream>
 
 #include "linux_parser.h"
+#include "process.h"
+#include "system.h"
+
 
 using std::stof;
 using std::string;
@@ -172,9 +175,14 @@ int LinuxParser::RunningProcesses() {
     return 0;
 }
 
-// TODO: Read and return the command associated with a process
-// REMOVE: [[maybe_unused]] once you define the function
-string LinuxParser::Command(int pid[[maybe_unused]]) { return string(); }
+string LinuxParser::Command(int pid) {
+    vector<Process> processes = System::Processes();
+    for(auto proc : processes) {
+        if(proc.Pid() == pid){
+            return proc.Command();
+        }
+    }
+}
 
 // TODO: Read and return the memory used by a process
 // REMOVE: [[maybe_unused]] once you define the function

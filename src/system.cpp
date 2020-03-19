@@ -1,12 +1,10 @@
-#include "system.h"
-
 #include <unistd.h>
-
 #include <cstddef>
 #include <set>
 #include <string>
 #include <vector>
 
+#include "system.h"
 #include "linux_parser.h"
 #include "process.h"
 #include "processor.h"
@@ -15,6 +13,9 @@ using std::set;
 using std::size_t;
 using std::string;
 using std::vector;
+
+
+std::vector<Process> System::processes_ = {};
 
 System::System(){
     vector<int> pids = LinuxParser::Pids();
