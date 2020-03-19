@@ -16,6 +16,7 @@ Process::Process(int pid_t) {
     pid_ = pid_t;
     user_ = captureProcessUser(pid_);
     command_ = captureProcessCommand(pid_);
+    uptime_ = UpTime();
 }
 
 std::string Process::captureProcessUser(int pid) {
@@ -73,10 +74,8 @@ std::string Process::captureProcessCommand(int pid) {
     return cmd;
 }
 
-// TODO: Return this process's ID
 int Process::Pid() { return pid_; }
 
-// TODO: Return this process's CPU utilization
 float Process::CpuUtilization() { 
 // fetch this process's cpu metrics
     vector<int> cpuMetrics = {};
@@ -94,28 +93,44 @@ float Process::CpuUtilization() {
             index++;
         }
     }
-  	  
-    // calculate process CpuUtilization
+  	filestream.close();
+  
+ // calculate process CpuUtilization
     long total_time = cpuMetrics[0] + cpuMetrics[1] + cpuMetrics[2] + cpuMetrics[3];
-//     int seconds = uptime_ - (cpuMetrics[4] / CLOCKS_PER_SEC);
-  float seconds = (cpuMetrics[4] / CLOCKS_PER_SEC);
+    float seconds = UpTime() - (cpuMetrics[4] / CLOCKS_PER_SEC);
     float cpuUsage = 100 * ((total_time / CLOCKS_PER_SEC) / seconds);
-    
+
     return cpuUsage;
   
 }
 
-// TODO: Return the command that generated this process
 string Process::Command() { return command_; }
 
-// TODO: Return this process's memory utilization
 string Process::Ram() { return string(); }
 
-// TODO: Return the user (name) that generated this process
 string Process::User() { return user_; }
 
-// TODO: Return the age of this process (in seconds)
-long int Process::UpTime() { return 0; }
+long int Process::UpTime() {    
+  int clockTick;
+    string line, metric;
+    std::ifstream filestream(LinuxParser::kProcDirectory + std::to_string(pid_) + LinuxParser::kStatFilename);
+    if (filestream.is_open()) {
+        std::getline(filestream, line);
+        std::istringstream linestream(line);
+        int index = 1;
+        while (getline(linestream, metric, ' ')) {
+            if (index == 22 &&
+                std::all_of(metric.begin(), metric.end(), isdigit)) {
+                clockTick = stoi(metric);
+                break;
+            }
+            index++;
+        }
+    }
+
+    // set uptime
+    uptime_ = clockTick / sysconf(_SC_CLK_TCK);
+    return uptime_; }
 
 // TODO: Overload the "less than" comparison operator for Process objects
 // REMOVE: [[maybe_unused]] once you define the function
