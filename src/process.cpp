@@ -45,7 +45,7 @@ std::string Process::captureProcessUser(int pid) {
     // get user name
     string username;
     std::ifstream usernameStream("/etc/passwd");
-    if (filestream.is_open()) {
+    if (usernameStream.is_open()) {
         while (std::getline(usernameStream, line)) {
             std::replace(line.begin(), line.end(), ':', ' ');
             std::istringstream linestream(line);
@@ -77,7 +77,33 @@ std::string Process::captureProcessCommand(int pid) {
 int Process::Pid() { return pid_; }
 
 // TODO: Return this process's CPU utilization
-float Process::CpuUtilization() { return 0; }
+float Process::CpuUtilization() { 
+// fetch this process's cpu metrics
+    vector<int> cpuMetrics = {};
+    string line, metric;
+    std::ifstream filestream(LinuxParser::kProcDirectory + std::to_string(pid_) + LinuxParser::kStatFilename);
+    if (filestream.is_open()) {
+        std::getline(filestream, line);
+        std::istringstream linestream(line);
+        int index = 1;
+       while (getline(linestream, metric, ' ')) {
+            if ((index == 14 || index == 15 || index == 16 || index == 17 || index == 22) &&
+                std::all_of(metric.begin(), metric.end(), isdigit)) {
+                cpuMetrics.push_back(stoi(metric));
+            }
+            index++;
+        }
+    }
+  	  
+    // calculate process CpuUtilization
+    long total_time = cpuMetrics[0] + cpuMetrics[1] + cpuMetrics[2] + cpuMetrics[3];
+//     int seconds = uptime_ - (cpuMetrics[4] / CLOCKS_PER_SEC);
+  float seconds = (cpuMetrics[4] / CLOCKS_PER_SEC);
+    float cpuUsage = 100 * ((total_time / CLOCKS_PER_SEC) / seconds);
+    
+    return cpuUsage;
+  
+}
 
 // TODO: Return the command that generated this process
 string Process::Command() { return command_; }
